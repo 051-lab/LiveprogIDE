@@ -1,7 +1,9 @@
 #include "VariableWatchWidget.h"
 #include "ui_VariableWatchWidget.h"
 
+#ifdef HAS_JDSP_DRIVER
 #include <IAudioService.h>
+#endif
 #include <QTimer>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -53,6 +55,10 @@ void VariableWatchWidget::onRefreshValueChanged(int value)
 
 void VariableWatchWidget::onVariableClicked(const QModelIndex &index)
 {
+#ifndef HAS_JDSP_DRIVER
+    Q_UNUSED(index)
+    return;
+#else
     if(!index.isValid())
         return;
 
@@ -82,4 +88,5 @@ void VariableWatchWidget::onVariableClicked(const QModelIndex &index)
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to manipulate variable '%1'. Either it does not exist anymore, or it cannot be changed.").arg(variable.name.c_str()));
     }
+#endif
 }

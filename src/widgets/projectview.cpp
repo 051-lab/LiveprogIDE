@@ -8,6 +8,21 @@ ProjectView::ProjectView(QWidget* parent) :
     connect(this,&QListWidget::currentItemChanged,this,&ProjectView::updatedCurrentFile);
 }
 
+ProjectView::~ProjectView()
+{
+    /* Removing the current item emits currentItemChanged.  During parent
+     * destruction the EELEditor receiver is already past its derived
+     * destructor, so no UI transition can be delivered safely. */
+    blockSignals(true);
+    while(count() > 0)
+    {
+        QListWidgetItem* listItem = takeItem(0);
+        delete listItem->data(Qt::UserRole).value<CodeContainer*>();
+        delete listItem;
+    }
+    previousCont = nullptr;
+}
+
 void ProjectView::addFile(QString path){
     closeFile(path);
     CodeContainer* cont = new CodeContainer(path);
@@ -24,7 +39,12 @@ void ProjectView::addFile(QString path){
 void ProjectView::closeFile(QString path){
     for(int i = count() - 1; i >= 0; i--){
         if(path == item(i)->toolTip()){
-            takeItem(i);
+            QListWidgetItem* listItem = takeItem(i);
+            CodeContainer* container = listItem->data(Qt::UserRole).value<CodeContainer*>();
+            if(previousCont == container)
+                previousCont = nullptr;
+            delete container;
+            delete listItem;
             break;
         }
     }
@@ -35,6 +55,18 @@ CodeContainer* ProjectView::getCurrentFile(){
         return nullptr;
 
     return selectedItems().first()->data(Qt::UserRole).value<CodeContainer*>();
+}
+
+void ProjectView::setCurrentFilePath(const QString& path)
+{
+    auto* container = getCurrentFile();
+    auto* current = currentItem();
+    if (container == nullptr || current == nullptr || path.isEmpty())
+        return;
+
+    container->path = path;
+    current->setToolTip(path);
+    current->setText(QFileInfo(path).fileName());
 }
 
 void ProjectView::updatedCurrentFile(QListWidgetItem* item){

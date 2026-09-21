@@ -46,7 +46,9 @@ EELEditor::EELEditor(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::EELEditor)
 {
-    this->setStyle(new ProxyStyle("Fusion"));
+    auto* proxyStyle = new ProxyStyle("Fusion");
+    proxyStyle->setParent(this);
+    this->setStyle(proxyStyle);
 
     ui->setupUi(this);
     this->layout()->setMenuBar(ui->menuBar);
@@ -130,9 +132,11 @@ EELEditor::EELEditor(QWidget *parent)
     findReplaceForm->setTextEdit(codeEdit);
     findReplaceForm->hide();
 
-    completer = new EELCompleter();
+    completer = new EELCompleter(this);
     highlighter = new EELHighlighter();
+    highlighter->setParent(this);
     symbolProvider = new CustomSymbolProvider();
+    symbolProvider->setParent(this);
 
     symbolProvider->setLanguageSpecs(completer,highlighter);
     symbolProvider->setCodeEditorModule(codeEdit);
@@ -324,7 +328,8 @@ void EELEditor::onConsoleOutputReceived(const QString &buffer)
 
 void EELEditor::onCurrentFileUpdated(CodeContainer *prev, CodeContainer *code)
 {
-    Q_UNUSED(prev)
+    if (prev != nullptr && prev != code)
+        codeEdit->syncCurrentContainer();
 
     if(code != nullptr)
     {
@@ -350,7 +355,11 @@ void EELEditor::closeEvent(QCloseEvent *ev)
 {
     /* Unfreeze on close */
     ui->actionFreeze->setChecked(false);
-    audioService->host()->freezeLiveprogExecution(false);
+#ifdef HAS_JDSP_DRIVER
+    if (audioService != nullptr && audioService->host() != nullptr) {
+        audioService->host()->freezeLiveprogExecution(false);
+    }
+#endif
 
     QMainWindow::closeEvent(ev);
 }
@@ -421,9 +430,13 @@ void EELEditor::openProject()
 
 void EELEditor::saveProject()
 {
+    codeEdit->syncCurrentContainer();
     projectView->getCurrentFile()->code = codeEdit->toPlainText();
-    projectView->getCurrentFile()->save("", this);
-    emit scriptSaved(projectView->getCurrentFile()->path);
+    if (projectView->getCurrentFile()->save("", this))
+    {
+        codeEdit->document()->setModified(false);
+        emit scriptSaved(projectView->getCurrentFile()->path);
+    }
 }
 
 void EELEditor::saveProjectAs()
@@ -435,9 +448,13 @@ void EELEditor::saveProjectAs()
         return;
     }
 
-    projectView->getCurrentFile()->code = codeEdit->toPlainText();
-    projectView->getCurrentFile()->save(fileName, this);
-    emit scriptSaved(fileName);
+    codeEdit->syncCurrentContainer();
+    if (projectView->getCurrentFile()->save(fileName, this))
+    {
+        codeEdit->document()->setModified(false);
+        projectView->setCurrentFilePath(fileName);
+        emit scriptSaved(fileName);
+    }
 }
 
 void EELEditor::runCode()
@@ -449,8 +466,12 @@ void EELEditor::runCode()
         return;
     }
 
-    saveProject();
-    emit executionRequested(projectView->getCurrentFile()->path);
+    codeEdit->syncCurrentContainer();
+    if (projectView->getCurrentFile()->save("", this))
+    {
+        codeEdit->document()->setModified(false);
+        emit executionRequested(projectView->getCurrentFile()->path);
+    }
 }
 
 void EELEditor::goToLine()

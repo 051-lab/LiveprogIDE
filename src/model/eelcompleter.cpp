@@ -14,7 +14,7 @@ EELCompleter::EELCompleter(QObject *parent) :
     QCompleter(parent)
 {
     // Setting up EEL types
-    smodel = new QStandardItemModel();
+    smodel = new QStandardItemModel(this);
     setModel(smodel);
 
     Q_INIT_RESOURCE(editorresources);

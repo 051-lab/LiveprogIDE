@@ -524,6 +524,11 @@ CDockManager::~CDockManager()
 	{
 		delete FloatingWidget;
 	}
+	/* The inherited container stores a QPointer back to this manager.  The
+	 * base destructor runs after CDockManager's dynamic type has ended; clear
+	 * the self-reference before it can dispatch removeDockContainer through
+	 * that stale derived pointer. */
+	clearDockManagerReference();
 	delete d;
 }
 

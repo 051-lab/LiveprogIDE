@@ -13,6 +13,8 @@ class CodeEditor : public QCodeEditor
 public:
     CodeEditor(QWidget* parent = nullptr);
     void goToLine(int line);
+    /* Persist the visible document before an action changes its container. */
+    void syncCurrentContainer();
     QList<FunctionDefinition> findFunctions();
     QList<AnnotationDefinition> findAnnotations();
     void loadStyle(QString path);

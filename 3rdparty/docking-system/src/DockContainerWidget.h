@@ -75,6 +75,10 @@ private:
 	friend struct FloatingDragPreviewPrivate;
 
 protected:
+	/* Clear the self-reference before a derived CDockManager reaches its base
+	 * destructor, when virtual dispatch through that pointer is no longer safe. */
+	void clearDockManagerReference();
+
 	/**
 	 * Handles activation events to update zOrderIndex
 	 */

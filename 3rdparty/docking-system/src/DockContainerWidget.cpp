@@ -1312,6 +1312,11 @@ CDockContainerWidget::~CDockContainerWidget()
 	delete d;
 }
 
+void CDockContainerWidget::clearDockManagerReference()
+{
+	d->DockManager.clear();
+}
+
 
 //============================================================================
 CDockAreaWidget* CDockContainerWidget::addDockWidget(DockWidgetArea area, CDockWidget* Dockwidget,

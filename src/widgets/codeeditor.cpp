@@ -13,7 +13,19 @@ CodeEditor::CodeEditor(QWidget* parent) :
     connect(refreshTick, &QTimer::timeout, this, &CodeEditor::fireRefreshSignal);
 
     connect(this,&QCodeEditor::cursorPositionChanged,this,[this]{refreshCursorSignalQueued = true;});
-    connect(document(),&QTextDocument::contentsChanged,this,[this]{refreshSignalQueued = true;});
+    connect(document(),&QTextDocument::contentsChanged,this,[this]{
+        refreshSignalQueued = true;
+        /* Keep the active container coherent immediately.  The 400 ms timer
+         * remains the debounce for expensive backend refreshes, but tab
+         * switches and saves must never observe stale text. */
+        syncCurrentContainer();
+    });
+}
+
+void CodeEditor::syncCurrentContainer()
+{
+    if (cont != nullptr)
+        cont->code = toPlainText();
 }
 
 void CodeEditor::fireRefreshSignal(){
@@ -24,8 +36,7 @@ void CodeEditor::fireRefreshSignal(){
     refreshSignalQueued = false;
     refreshCursorSignalQueued = false;
 
-    if(cont != nullptr)
-        cont->code = toPlainText();
+    syncCurrentContainer();
 }
 
 void CodeEditor::showEvent(QShowEvent *){
